@@ -111,6 +111,56 @@
 #input-form input[type="number"] {
     min-width: 80px;
 }
+
+        /* ⭐️ スマホ対応のための追加CSS (index.html) ⭐️ */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px; /* 内側の余白を少し減らす */
+    }
+    
+    /* 入力フォームを縦に並べる */
+    #input-form {
+        /* グリッドではなく、縦に一つずつ並べる (flex-wrap: wrap を使用) */
+        display: flex;
+        flex-wrap: wrap; 
+        /* ボタン以外の入力欄が幅いっぱいに広がるようにする */
+    }
+    
+    #input-form input[type="text"],
+    #input-form input[type="number"],
+    #input-form button {
+        width: 100%; /* すべての入力欄を幅いっぱいに */
+        margin-bottom: 10px; /* 縦の間隔を空ける */
+        box-sizing: border-box; /* paddingを含めて幅100%にする */
+    }
+    
+    /* 検索・並べ替えのコントロールを縦に並べる */
+    #controls {
+        flex-direction: column; /* 縦方向に並べる */
+        align-items: stretch; /* 幅いっぱいに広げる */
+    }
+    #search-input, #sort-select {
+        width: 100% !important; /* 強制的に幅いっぱいに */
+        margin-left: 0 !important;
+        margin-bottom: 10px;
+    }
+    
+    /* リスト項目（li）内の詳細情報も縦に並べる */
+    #goods-list li {
+        flex-direction: column; /* 縦方向に並べる */
+        align-items: flex-start;
+    }
+    .item-actions {
+        margin-top: 10px; /* ボタンの上にスペースを空ける */
+        width: 100%;
+        text-align: right;
+    }
+    .item-detail {
+        /* 詳細情報の「|」を改行に変える */
+        white-space: normal;
+    }
+}
+        
     </style>
 </head>
 <body>
