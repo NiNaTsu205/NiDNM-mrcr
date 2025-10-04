@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推し活グッズ管理リスト</title>
+    <style>
+        /* 3. CSS (見た目の設定) */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #ff69b4; /* 推しカラーっぽい色に */
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        /* 入力フォームのスタイル */
+        #input-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #input-form input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1; /* スペースを埋める */
+        }
+        #input-form button {
+            background-color: #ff69b4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #input-form button:hover {
+            background-color: #ff4d99;
+        }
+        /* リストのスタイル */
+        #goods-list {
+            list-style: none;
+            padding: 0;
+        }
+        #goods-list li {
+            background: #ffe6f2; /* 薄いピンク */
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-info {
+            flex-grow: 1;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .item-memo {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .item-actions button {
+            margin-left: 8px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: #4da6ff; /* 青 */
+            color: white;
+        }
+        .delete-btn {
+            background-color: #ff3333; /* 赤 */
+            color: white;
+        }
+.item-detail {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 3px;
+    margin-bottom: 3px; /* メモとの間に少し間隔 */
+}
+.detail-label {
+    font-weight: bold;
+    color: #a0529d; /* 少し濃い色で見やすく */
+}
+/* 入力フォームの幅を調整 */
+#input-form {
+    display: grid; /* グリッドレイアウトにして4つの項目を並べる */
+    /* グッズ名(2fr)、ジャンル(1.5fr)、金額(1fr)、メモ(2fr)、ボタン(auto) の幅を設定 */
+    grid-template-columns: 2fr 1.5fr 1fr 2fr auto; 
+    gap: 10px;
+    margin-bottom: 20px;
+}
+/* 金額入力欄の最小幅を調整 */
+#input-form input[type="number"] {
+    min-width: 80px;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>推し活グッズ管理リスト</h1>
+
+<p style="text-align: right;"><a href="menu.html">メニューに戻る</a></p>
+
+       <div id="controls" style="margin-bottom: 20px;">
+            <input type="text" id="search-input" placeholder="グッズ名やジャンルで検索" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 50%;">
+
+            <label for="sort-select" style="margin-left: 20px; font-weight: bold;">並べ替え:</label>
+            <select id="sort-select" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="name-asc">グッズ名 (昇順)</option>
+                <option value="name-desc">グッズ名 (降順)</option>
+                <option value="price-asc">金額 (安い順)</option>
+                <option value="price-desc">金額 (高い順)</option>
+            </select>
+        </div>
+
+       <form id="input-form">
+    <input type="text" id="goods-name" placeholder="グッズ名" required>
+    <input type="text" id="goods-genre" placeholder="ジャンル（例: CD, アクリルスタンド）"> 
+    <input type="number" id="goods-price" placeholder="購入金額（数字のみ）">
+    <input type="text" id="goods-memo" placeholder="その他メモ/詳細"> 
+    <button type="submit">追加</button>
+</form>
+
+        <ul id="goods-list">
+            </ul>
+    </div>
+
+    <script>
+        // データが保存されているキー
+        const STORAGE_KEY = 'oshikatsuGoodsList';
+
+        // データをローカルストレージから読み込む関数
+        function loadGoods() {
+            const json = localStorage.getItem(STORAGE_KEY);
+            // データがあればJSONをJavaScriptのオブジェクトに変換し、なければ空の配列を返す
+            return json ? JSON.parse(json) : [];
+        }
+
+        // データをローカルストレージに保存する関数
+        function saveGoods(goods) {
+            // JavaScriptのオブジェクトをJSON文字列に変換して保存する
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(goods));
+        }
+
+// グッズリストを描画する関数
+function renderGoodsList() {
+    const goods = loadGoods();
+    const listElement = document.getElementById('goods-list');
+    listElement.innerHTML = ''; // 一旦リストを空にする
+
+    goods.forEach((item, index) => {
+        // 金額にコンマと円マークを付けるための整形
+        const formattedPrice = item.price ? `¥${Number(item.price).toLocaleString()}` : '未登録';
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="item-info">
+                <div class="item-name">${item.name}</div>
+                <div class="item-detail">
+                    <span class="detail-label">ジャンル:</span> ${item.genre || '未登録'} | 
+                    <span class="detail-label">金額:</span> ${formattedPrice}
+                </div>
+                <div class="item-memo">${item.memo || 'メモなし'}</div>
+            </div>
+            <div class="item-actions">
+                <button class="edit-btn" data-index="${goods.findIndex(g => g.name === item.name && g.genre === item.genre)}">編集</button>
+                <button class="delete-btn" data-index="${goods.findIndex(g => g.name === item.name && g.genre === item.genre)}">削除</button>
+            </div>
+        `;
+        listElement.appendChild(li);
+    });
+}
+
+// フォームの送信（グッズ追加）を処理する関数
+document.getElementById('input-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // フォームのデフォルトの送信動作をキャンセル
+
+    const nameInput = document.getElementById('goods-name');
+    // --- 新しい入力欄の要素を取得 ---
+    const genreInput = document.getElementById('goods-genre');
+    const priceInput = document.getElementById('goods-price');
+    const memoInput = document.getElementById('goods-memo');
+    // --------------------------------
+
+    const newGoods = {
+        name: nameInput.value,
+        // --- 新しい項目を設定 ---
+        genre: genreInput.value,
+        price: priceInput.value,
+        // ------------------------
+        memo: memoInput.value 
+    };
+
+    const goods = loadGoods();
+    goods.push(newGoods); // 新しいグッズを配列に追加
+    saveGoods(goods); // 保存
+
+    // 入力フィールドをクリア
+    nameInput.value = '';
+    genreInput.value = ''; // 新しい項目もクリア
+    priceInput.value = ''; // 新しい項目もクリア
+    memoInput.value = '';
+
+    renderGoodsList(); // リストを更新
+});
+});
+
+        // 削除・編集ボタンのクリックを処理する（イベントデリゲーション）
+        document.getElementById('goods-list').addEventListener('click', function(event) {
+            const target = event.target;
+            // ボタンがクリックされたか、data-index属性があるか確認
+            if (target.tagName === 'BUTTON' && target.hasAttribute('data-index')) {
+                const index = parseInt(target.getAttribute('data-index'));
+                let goods = loadGoods();
+
+                if (target.classList.contains('delete-btn')) {
+                    // 削除処理
+                    if (confirm(`${goods[index].name} を削除しますか？`)) {
+                        goods.splice(index, 1); // 配列から指定の要素を削除
+                        saveGoods(goods);
+                        renderGoodsList();
+                    }
+        } else if (target.classList.contains('edit-btn')) {
+                    // 編集処理
+                    const currentItem = goods[index];
+                    const newName = prompt('新しいグッズ名を入力してください:', currentItem.name);
+                    
+                    if (newName !== null) {
+                        // --- 新しい項目をプロンプトで編集 ---
+                        const newGenre = prompt('新しいジャンルを入力してください:', currentItem.genre);
+                        const newPrice = prompt('新しい購入金額を入力してください:', currentItem.price);
+                        const newMemo = prompt('新しいその他メモを入力してください:', currentItem.memo);
+                        
+                        if (newGenre !== null && newPrice !== null && newMemo !== null) {
+                            goods[index].name = newName;
+                            goods[index].genre = newGenre;
+                            goods[index].price = newPrice;
+                            goods[index].memo = newMemo;
+                            saveGoods(goods);
+                            renderGoodsList();
+                        }
+                        // ------------------------------------
+                    }
+                }
+            }
+        });
+
+        // ページが読み込まれたらリストを表示
+        document.addEventListener('DOMContentLoaded', renderGoodsList);
+
+// ⭐️ 追加 ⭐️ 検索と並べ替えのイベントリスナー
+document.getElementById('search-input').addEventListener('input', renderGoodsList);
+document.getElementById('sort-select').addEventListener('change', renderGoodsList);
+// ------------------------------
+
+    </script>
+</body>
+</html>
