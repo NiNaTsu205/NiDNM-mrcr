@@ -52,6 +52,59 @@ h1 { color: #f83333; text-align: center; margin-bottom: 25px; } /* メルカリ�
         .item-actions button { margin-left: 8px; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
         .edit-btn { background-color: #4da6ff; color: white; }
         .delete-btn { background-color: #ff3333; color: white; }
+
+        /* ⭐️ スマホ対応のための追加CSS (merucari.html) ⭐️ */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    
+    /* 入力フォームを縦に並べる */
+    #input-form {
+        display: flex;
+        flex-wrap: wrap; 
+    }
+    
+    #input-form input, 
+    #input-form select,
+    #input-form button {
+        width: 100%; /* すべての入力・選択欄を幅いっぱいに */
+        margin-bottom: 10px;
+        box-sizing: border-box;
+    }
+    
+    /* 検索・並べ替えのコントロールを縦に並べる */
+    #controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #search-input, #sort-select {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-bottom: 10px;
+    }
+    
+    /* リスト項目（li）内の表示を縦に積み重ねる */
+    #sales-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .item-info {
+        width: 100%;
+    }
+    .item-detail {
+        /* 詳細情報の表示が複数行になっても大丈夫なように */
+        white-space: normal;
+    }
+    .profit {
+        margin-top: 5px; /* 利益表示を下に移動 */
+    }
+    .item-actions {
+        margin-top: 10px;
+        width: 100%;
+        text-align: right;
+    }
+}
     </style>
 </head>
 <body>
