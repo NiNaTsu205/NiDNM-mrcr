@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メルカリ販売管理リスト</title>
+    <style>
+        /* CSSは前回の推し活リストのものを流用・調整してください */
+        body { font-family: 'Arial', sans-serif; background-color: #f7f7f7; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        
+h1 { color: #f83333; text-align: center; margin-bottom: 25px; } /* メルカリっぽい赤 */
+        
+        /* 検索・並べ替えエリア */
+        #controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        #search-input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; }
+        #sort-select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        /* 入力フォームの調整 */
+        #input-form {
+            display: grid;
+            /* 品物名(2fr)、状態(1.5fr)、仕入れ価格(1fr)、販売価格(1fr)、メモ(2fr)、ボタン(auto) */
+            grid-template-columns: 2fr 1.5fr 1fr 1fr 2fr auto;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #input-form input, #input-form select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #input-form button { background-color: #f83333; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        
+        /* リストのスタイル */
+        #sales-list { list-style: none; padding: 0; }
+        #sales-list li {
+            background: #fff0f0; /* 薄い赤 */
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-info { flex-grow: 1; }
+        .item-name { font-weight: bold; color: #333; }
+        .item-detail { font-size: 0.9em; color: #666; margin-top: 3px; margin-bottom: 3px; }
+        .detail-label { font-weight: bold; color: #cc0000; }
+        .profit { font-weight: bold; color: green; margin-left: 10px; } /* 利益を緑で強調 */
+        .item-actions button { margin-left: 8px; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .edit-btn { background-color: #4da6ff; color: white; }
+        .delete-btn { background-color: #ff3333; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>メルカリ販売管理リスト</h1>
+
+<p style="text-align: right;"><a href="menu.html">メニューに戻る</a></p>
+
+        <div id="controls">
+            <input type="text" id="search-input" placeholder="品物名やメモで検索">
+
+            <label for="sort-select" style="font-weight: bold;">並べ替え:</label>
+            <select id="sort-select">
+                <option value="name-asc">品物名 (昇順)</option>
+                <option value="profit-desc">利益 (多い順)</option>
+                <option value="price-desc">販売価格 (高い順)</option>
+                <option value="status-asc">状態 (ステータス)</option>
+            </select>
+        </div>
+
+        <form id="input-form">
+            <input type="text" id="item-name" placeholder="品物名" required>
+            <select id="item-status">
+                <option value="preparation">準備中</option>
+                <option value="listing">出品中</option>
+                <option value="sold">売却済み</option>
+                <option value="removed">出品停止/削除</option>
+            </select>
+            <input type="number" id="item-cost" placeholder="仕入れ価格（原価）" min="0">
+            <input type="number" id="item-price" placeholder="販売価格（売れた金額）" min="0">
+            <input type="text" id="item-memo" placeholder="メモ/詳細"> 
+            <button type="submit">追加</button>
+        </form>
+
+        <ul id="sales-list">
+            </ul>
+    </div>
+
+    <script>
+        // データが保存されているキーを新しいものに変更
+        const STORAGE_KEY = 'merucariSalesList';
+        const MERCARI_FEE_RATE = 0.10; // メルカリ手数料 10%
+
+        // データをローカルストレージから読み込む関数 (前回と同じ)
+        function loadItems() {
+            const json = localStorage.getItem(STORAGE_KEY);
+            return json ? JSON.parse(json) : [];
+        }
+
+        // データをローカルストレージに保存する関数 (前回と同じ)
+        function saveItems(items) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        }
+        
+        // 状態（ステータス）を日本語で表示するためのマップ
+        const STATUS_MAP = {
+            'preparation': '準備中',
+            'listing': '出品中',
+            'sold': '売却済み',
+            'removed': '出品停止/削除'
+        };
+
+        // リストを描画する関数 (検索・並べ替えロジックを含む)
+        function renderSalesList() {
+            let items = loadItems();
+            const listElement = document.getElementById('sales-list');
+            listElement.innerHTML = ''; 
+
+            // 1. 検索処理 (Filtering)
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filteredItems = items.filter(item => {
+                return item.name.toLowerCase().includes(searchTerm) ||
+                       STATUS_MAP[item.status].toLowerCase().includes(searchTerm) ||
+                       item.memo.toLowerCase().includes(searchTerm);
+            });
+
+            // 2. 並べ替え処理 (Sorting)
+            const sortValue = document.getElementById('sort-select').value;
+            
+            filteredItems.sort((a, b) => {
+                if (sortValue === 'name-asc') {
+                    return a.name.localeCompare(b.name, 'ja');
+                } else if (sortValue === 'profit-desc') {
+                    // 利益が多い順
+                    const profitA = (Number(a.price) || 0) * (1 - MERCARI_FEE_RATE) - (Number(a.cost) || 0);
+                    const profitB = (Number(b.price) || 0) * (1 - MERCARI_FEE_RATE) - (Number(b.cost) || 0);
+                    return profitB - profitA;
+                } else if (sortValue === 'price-desc') {
+                    // 販売価格が高い順
+                    const priceA = Number(a.price) || 0;
+                    const priceB = Number(b.price) || 0;
+                    return priceB - priceA;
+                } else if (sortValue === 'status-asc') {
+                    // 状態 (ステータス) 順
+                    return a.status.localeCompare(b.status);
+                }
+                return 0;
+            });
+
+            // 3. 画面表示
+            filteredItems.forEach((item) => {
+                const cost = Number(item.cost) || 0;
+                const price = Number(item.price) || 0;
+                
+                // 利益の計算: 販売価格 - 手数料(10%) - 仕入れ価格
+                const fee = price * MERCARI_FEE_RATE;
+                const profit = price - fee - cost;
+                
+                // 利益表示を整形
+                const formattedProfit = `¥${profit.toFixed(0).toLocaleString()}`;
+                
+                // 元の配列でのインデックスを特定（編集・削除用）
+                const originalIndex = items.findIndex(i => i.name === item.name && i.cost === item.cost);
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-name">${item.name} <span style="color:#0077c2;">(${STATUS_MAP[item.status]})</span></div>
+                        <div class="item-detail">
+                            <span class="detail-label">原価:</span> ¥${cost.toLocaleString()} | 
+                            <span class="detail-label">売値:</span> ¥${price.toLocaleString()} |
+                            <span class="detail-label">手数料:</span> ¥${fee.toFixed(0).toLocaleString()}
+                        </div>
+                        <div class="item-memo">${item.memo || 'メモなし'}</div>
+                        <div class="profit">利益: ${formattedProfit}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="edit-btn" data-index="${originalIndex}">編集</button>
+                        <button class="delete-btn" data-index="${originalIndex}">削除</button>
+                    </div>
+                `;
+                listElement.appendChild(li);
+            });
+        }
+
+        // フォームの送信（品物追加）を処理する関数
+        document.getElementById('input-form').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            const nameInput = document.getElementById('item-name');
+            const statusInput = document.getElementById('item-status');
+            const costInput = document.getElementById('item-cost');
+            const priceInput = document.getElementById('item-price');
+            const memoInput = document.getElementById('item-memo');
+
+            const newItem = {
+                name: nameInput.value,
+                status: statusInput.value,
+                cost: costInput.value,
+                price: priceInput.value,
+                memo: memoInput.value
+            };
+
+            const items = loadItems();
+            items.push(newItem); 
+            saveItems(items); 
+
+            // 入力フィールドをクリア
+            nameInput.value = '';
+            statusInput.value = 'preparation'; // 状態はデフォルトに戻す
+            costInput.value = ''; 
+            priceInput.value = ''; 
+            memoInput.value = '';
+
+            renderSalesList(); 
+        });
+
+        // 削除・編集ボタンのクリックを処理する（前回とほぼ同じ）
+        document.getElementById('sales-list').addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.hasAttribute('data-index')) {
+                const index = parseInt(target.getAttribute('data-index'));
+                let items = loadItems();
+
+                if (target.classList.contains('delete-btn')) {
+                    // 削除処理
+                    if (confirm(`${items[index].name} を削除しますか？`)) {
+                        items.splice(index, 1); 
+                        saveItems(items);
+                        renderSalesList();
+                    }
+                } else if (target.classList.contains('edit-btn')) {
+                    // 編集処理
+                    const currentItem = items[index];
+                    const newName = prompt('新しい品物名を入力してください:', currentItem.name);
+                    
+                    if (newName !== null) {
+                        // 状態はpromptでは選択できないため、文字列入力で一時対応（より良い方法は後述）
+                        const newStatus = prompt(`新しい状態を入力してください (${Object.keys(STATUS_MAP).join(', ')}):`, currentItem.status);
+                        const newCost = prompt('新しい仕入れ価格を入力してください:', currentItem.cost);
+                        const newPrice = prompt('新しい販売価格を入力してください:', currentItem.price);
+                        const newMemo = prompt('新しいメモを入力してください:', currentItem.memo);
+                        
+                        if (newStatus !== null && newCost !== null && newPrice !== null && newMemo !== null) {
+                            items[index].name = newName;
+                            // STATUS_MAPに存在しない値は入れないように簡易チェック
+                            items[index].status = STATUS_MAP[newStatus] ? newStatus : currentItem.status; 
+                            items[index].cost = newCost;
+                            items[index].price = newPrice;
+                            items[index].memo = newMemo;
+                            saveItems(items);
+                            renderSalesList();
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 検索と並べ替えのイベントリスナー
+        document.getElementById('search-input').addEventListener('input', renderSalesList);
+        document.getElementById('sort-select').addEventListener('change', renderSalesList);
+
+        // ページが読み込まれたらリストを表示
+        document.addEventListener('DOMContentLoaded', renderSalesList);
+
+    </script>
+</body>
+</html>
